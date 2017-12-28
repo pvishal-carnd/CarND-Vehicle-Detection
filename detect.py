@@ -2,7 +2,10 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools
+import pickle
 import cv2
+
+from train import extract_features
 
 def genSameSizeWindows(imgSize, x_start_stop=None, y_start_stop=None,
                   xy_window=(32, 32), xy_overlap=(0.5, 0.5)):
@@ -46,25 +49,65 @@ def genWindowList(sizeList, imgSize):
     for winSize, yLims in sizeList:
         windows = genSameSizeWindows(imgSize, x_start_stop=None, y_start_stop=yLims,
                                     xy_window=winSize, xy_overlap=(0.5, 0.5))
-        output.append(windows)
+        output.extend(windows)
     return output
+
+def searchOverWindows(img, windows, clf, scaler,
+                      spatialParams, colorParams, hogParams):
+
+    # A list to store all positive windows
+    posWindows = []
+
+    # Iterate over all windows in the input image
+    for win in windows:
+        # Extract pixels and resize
+        # TODO: Don't hardcode (64,64)
+        winImg = cv2.resize(img[win[0][1]:win[1][1], win[0][0]:win[1][0]], (64, 64))
+        features = extract_features(winImg, spatialParams, colorParams, hogParams)
+
+        # Have the scaler scale the features
+        scFeatures = scaler.transform(np.concatenate(features).reshape(1, -1))
+
+        # Have the classifier make the prediction
+        prediction = clf.predict(scFeatures)
+        if prediction:
+            posWindows.append(win)
+
+    return posWindows
 
 if __name__ == '__main__':
 
+    ## Read the saved model
+
+    loaded = pickle.load(open('model.pkl', 'rb'))
+    clf = loaded['model']
+    scaler = loaded['scaler']
+    spatialParams = loaded['spatialParams']
+    colorParams   = loaded['colorParams']
+    hogParams     = loaded['hogParams']
 
     ## Test window creation
     testImg = mpimg.imread('test_images/test1.jpg')
     imgSize = testImg.shape[:2]
+    #pyramid = [
+    #        ((64, 64),  [400, 500]),
+    #        ((96, 96),  [400, 500]),
+    #        ((128, 128),[450, 600]),
+    #          ]
     pyramid = [
             ((64, 64),  [400, 500]),
-            ((96, 96),  [400, 500]),
-            ((128, 128),[450, 600]),
+            #((96, 96),  [400, 500]),
+            #((128, 128),[450, 600]),
               ]
     windows = genWindowList(pyramid, imgSize)
 
-    #print(len(list(itertools.chain(*windows))))
-    print(imgSize)
-    for p1, p2 in itertools.chain(*windows):
+    posWindows = searchOverWindows(testImg, windows, clf, scaler,
+            spatialParams, colorParams, hogParams)
+
+    print(posWindows)
+    for p1, p2 in itertools.chain(posWindows):
+        print(p1)
+        print(p2)
         cv2.rectangle(testImg, p1, p2, (15,15,200), 4)
     plt.imshow(testImg)
     plt.show()
