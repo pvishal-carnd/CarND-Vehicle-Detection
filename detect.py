@@ -63,12 +63,20 @@ def genWindowList(sizeList, imgSize, overlaps):
         output.extend(windows)
     return output
 
+def predictBinary(clf, features):
+    return clf.predict(features)
+
+def predictWithMargin(clf, features, threshold):
+    margin = clf.decision_function(features)
+    return margin > threshold
+
+
 def searchOverWindows(img, windows, clf, scaler,
                       spatialParams, colorParams, hogParams):
 
     clfSize = spatialParams['clfSize']
     # A list to store all positive windows
-    posWindows = []
+    positives = []
 
     # Iterate over all windows in the input image
     for win in windows:
@@ -80,11 +88,12 @@ def searchOverWindows(img, windows, clf, scaler,
         scFeatures = scaler.transform(np.concatenate(features).reshape(1, -1))
 
         # Have the classifier make the prediction
-        prediction = clf.predict(scFeatures)
+        #prediction = predictWithMargin(clf, scFeatures, 0.25)
+        prediction = predictBinary(clf, scFeatures)
         if prediction:
-            posWindows.append(win)
+            positives.append(win)
 
-    return posWindows
+    return positives
 
 def updateHeatMap(heatmap, windows):
     # Iterate through list of bboxes
