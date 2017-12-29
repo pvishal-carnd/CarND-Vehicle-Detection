@@ -5,7 +5,7 @@ import itertools
 import pickle
 import cv2
 
-from train import extract_features
+from train import extract_features, convertColor
 
 def genSameSizeWindows(imgSize, x_start_stop=None, y_start_stop=None,
                   xy_window=(32, 32), xy_overlap=(0.5, 0.5)):
@@ -87,24 +87,34 @@ if __name__ == '__main__':
     hogParams     = loaded['hogParams']
 
     ## Test window creation
+    cspace = hogParams['colorSpace']
     testImg = mpimg.imread('test_images/test1.jpg')
-    imgSize = testImg.shape[:2]
+    procImg = convertColor(testImg, cspace)
+    imgSize = procImg.shape[:2]
     #pyramid = [
     #        ((64, 64),  [400, 500]),
     #        ((96, 96),  [400, 500]),
     #        ((128, 128),[450, 600]),
     #          ]
+    #pyramid = [
+    #        #((64, 64),  [400, 500]),
+    #        #((96, 96),  [400, 500]),
+    #        ((128, 128),[450, 600]),
+    #          ]
     pyramid = [
-            ((64, 64),  [400, 500]),
-            #((96, 96),  [400, 500]),
-            #((128, 128),[450, 600]),
-              ]
+           ((64, 64),  [400, 500]),
+           ((96, 96),  [400, 500]),
+           ((128, 128),[400, 578]),
+           ((192, 192),[450, 700]),
+           ((256, 256),[450, 700])
+      ]
+
     windows = genWindowList(pyramid, imgSize)
 
-    posWindows = searchOverWindows(testImg, windows, clf, scaler,
+    posWindows = searchOverWindows(procImg, windows, clf, scaler,
             spatialParams, colorParams, hogParams)
 
-    print(posWindows)
+    #print(posWindows)
     for p1, p2 in itertools.chain(posWindows):
         print(p1)
         print(p2)

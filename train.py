@@ -39,10 +39,8 @@ def convertColor(rgbImg, cspace):
         outImg = cv2.cvtColor(rgbImg, cv2.COLOR_RGB2YUV)
     elif cspace == 'YCrCb':
         outImg = cv2.cvtColor(rgbImg, cv2.COLOR_RGB2YCrCb)
-    elif cspace == 'YCrCb':
-        outImg = cv2.cvtColor(rgbImg, cv2.COLOR_RGB2YCrCb)
 
-    return outImg
+    return outImg/np.max(outImg)
 
 # Define a function to compute binned color features
 def bin_spatial(img, params):
@@ -86,30 +84,26 @@ def get_hog_features(img, params, vis=False, feature_vec=True):
 # Define a function to extract features from a list of images
 def extract_features(img, spatialParams, colorParams, hogParams):
 
-    cspace = hogParams['colorSpace']
     hog_channel = hogParams['hogChannel']
 
-    # apply color conversion if other than 'RGB'
-    feature_image = convertColor(img, cspace)
-
     # Apply bin_spatial() to get spatial color features
-    spatial_features = bin_spatial(feature_image, spatialParams)
+    spatial_features = bin_spatial(img, spatialParams)
 
     # Apply color_hist() also with a color space option now
-    hist_features = color_hist(feature_image, colorParams)
+    hist_features = color_hist(img, colorParams)
 
     # Call get_hog_features() with vis=False, feature_vec=True
     if hog_channel == 'ALL':
         hog_features = []
-        for channel in range(feature_image.shape[2]):
+        for channel in range(img.shape[2]):
             hog_features.append(get_hog_features(
-                                feature_image[:,:,channel],
+                                img[:,:,channel],
                                 hogParams,
                                 vis=False, feature_vec=True))
         hog_features = np.ravel(hog_features)
     else:
         hog_features = get_hog_features(
-                                feature_image[:,:,hog_channel],
+                                img[:,:,hog_channel],
                                 hogParams,
                                 vis=False, feature_vec=True)
 
@@ -118,12 +112,16 @@ def extract_features(img, spatialParams, colorParams, hogParams):
 
 def featuresFromImgList(imgs, spatialParams, colorParams, hogParams):
 
+    cspace = hogParams['colorSpace']
+
     # Create a list to append feature vectors to
     features = []
     # Iterate through the list of images
     for file in imgs:
         # Read in each one by one
         img = mpimg.imread(file)
+        # apply color conversion if other than 'RGB'
+        img = convertColor(img, cspace)
 
         spatial_features, hist_features, hog_features = extract_features(img, spatialParams,
                                                         colorParams, hogParams)
