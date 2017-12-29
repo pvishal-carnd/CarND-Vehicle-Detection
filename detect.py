@@ -1,5 +1,7 @@
+from moviepy.editor import VideoFileClip
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
+from collections import deque
 import numpy as np
 import itertools
 import pickle
@@ -17,6 +19,8 @@ detectParams['windowSizes'] = [
                                ((256, 256),[450, 700])
                               ]
 detectParams['windowOverlap'] = (0.5, 0.5)
+detectParams['heatmapCacheSize'] = 10
+detectParams['heatmapThreshold'] = 3
 
 def genSameSizeWindows(imgSize, x_start_stop=None, y_start_stop=None,
                   xy_window=(32, 32), xy_overlap=(0.5, 0.5)):
@@ -89,14 +93,25 @@ def searchOverWindows(img, windows, clf, scaler,
 
         # Have the classifier make the prediction
         #prediction = predictWithMargin(clf, scFeatures, 0.25)
-        prediction = predictBinary(clf, scFeatures)
+        prediction = predictWithMargin(clf, scFeatures, 0.7)
         if prediction:
             positives.append(win)
 
     return positives
 
-def updateHeatMap(heatmap, windows):
-    # Iterate through list of bboxes
+#def updateHeatMap(windows, heatmap=None):
+#    # Iterate through list of bboxes
+#    for win in windows:
+#        # Add += 1 for all pixels inside each bbox
+#        # Assuming each "box" takes the form ((x1, y1), (x2, y2))
+#        heatmap[win[0][1]:win[1][1], win[0][0]:win[1][0]] += 1
+#
+#    # Return updated heatmap
+#    return heatmap
+
+def genHeatmap(windows, imgSize):
+    heatmap = np.zeros(imgSize, dtype=np.float)
+
     for win in windows:
         # Add += 1 for all pixels inside each bbox
         # Assuming each "box" takes the form ((x1, y1), (x2, y2))
@@ -129,7 +144,7 @@ def drawLabels(img, labels):
     return img
 
 
-def processFrame(img, intermediates=False):
+def processFrame(img, intermediates=True):
 
     cspace = state['hogParams']['colorSpace']
     cImg = convertColor(img, cspace)
@@ -137,16 +152,14 @@ def processFrame(img, intermediates=False):
             state['scaler'], state['spatialParams'], state['colorParams'],
             state['hogParams'])
 
-    heatmap = state['heatmap']
-    heatmap = updateHeatMap(heatmap, positives)
-
-    #thresholdHeatmap(heatmap, 1)
+    #heatmap = state['heatmap']
+    heatmapCurrent = genHeatmap(positives, state['imgSize'])
+    state['heatmaps'].append(heatmapCurrent)
+    heatmap = thresholdHeatmap(sum(state['heatmaps']), detectParams['heatmapThreshold'])
 
     # Find final boxes from heatmap using label function
     labels = label(heatmap)
-    drawImg = drawLabels(np.copy(testImg), labels)
-
-    state['heatmap'] = heatmap
+    drawImg = drawLabels(np.copy(img), labels)
 
     if intermediates:
         heatmap = heatmap/np.max(heatmap)
@@ -162,6 +175,7 @@ def processFrame(img, intermediates=False):
                         np.hstack( (imgTopLeft, imgTopRight) ),
                         np.hstack( (imgBotLeft, imgBotRight) )
                         ))
+        outFrame = (outFrame*255).astype(np.uint8)
     else:
         outFrame = drawImg
 
@@ -181,16 +195,21 @@ if __name__ == '__main__':
 
     state['windows'] = genWindowList(detectParams['windowSizes'],
                         state['imgSize'], detectParams['windowOverlap'])
-    state['heatmap'] = np.zeros(state['imgSize'], dtype=np.float)
+    #state['heatmap'] = np.zeros(state['imgSize'], dtype=np.float)
+    state['heatmaps'] = deque(maxlen=detectParams['heatmapCacheSize'])
+
+    videoIn = VideoFileClip('./test_video.mp4')
+    videoOut = videoIn.fl_image(processFrame)
+    videoOut.write_videofile('out.mp4', audio=False)
 
     ## Test window creation
-    testImg = mpimg.imread('test_images/test1.jpg')
-    outImg = processFrame(testImg, intermediates=True)
+    #testImg = mpimg.imread('test_images/test1.jpg')
+    #outImg = processFrame(testImg, intermediates=True)
 
-    fig = plt.figure()
-    plt.imshow(outImg)
-    plt.xticks([])
-    plt.yticks([])
-    plt.show()
+    #fig = plt.figure()
+    #plt.imshow(outImg)
+    #plt.xticks([])
+    #plt.yticks([])
+    #plt.show()
 
 
