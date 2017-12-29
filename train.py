@@ -11,20 +11,41 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
 spatialParams = {}
-spatialParams['size'] = (32, 32)
+spatialParams['enabled'] = True
+spatialParams['size'] = (16, 16)
 spatialParams['clfSize'] = (64, 64)
 
 colorParams = {}
-colorParams['nBins'] = 32
+colorParams['enabled'] = True
+colorParams['nBins'] = 16
 colorParams['binsRange'] = (0, 256)
 
 hogParams = {}
-hogParams['colorSpace'] = 'YUV'
+hogParams['enabled'] = True
+hogParams['colorSpace'] = 'YCrCb'
 hogParams['orient'] = 9
 hogParams['pixPerCell'] = 8
 hogParams['cellsPerBlock'] = 2
 hogParams['hogChannel'] = 0 # Can be 0, 1, 2, or "ALL"
 
+
+#spatialParams = {}
+#spatialParams['enabled'] = True
+#spatialParams['size'] = (16, 16)
+#spatialParams['clfSize'] = (64, 64)
+#
+#colorParams = {}
+#colorParams['enabled'] = True
+#colorParams['nBins'] = 32
+#colorParams['binsRange'] = (0, 256)
+#
+#hogParams = {}
+#hogParams['enabled'] = True
+#hogParams['colorSpace'] = 'LUV'
+#hogParams['orient'] = 8
+#hogParams['pixPerCell'] = 8
+#hogParams['cellsPerBlock'] = 2
+#hogParams['hogChannel'] = 0 # Can be 0, 1, 2, or "ALL"
 
 def convertColor(rgbImg, cspace):
     # apply color conversion if other than 'RGB'

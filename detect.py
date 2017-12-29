@@ -20,7 +20,7 @@ detectParams['windowSizes'] = [
                               ]
 detectParams['windowOverlap'] = (0.5, 0.5)
 detectParams['heatmapCacheSize'] = 10
-detectParams['heatmapThreshold'] = 3
+detectParams['heatmapThreshold'] = 10
 
 def genSameSizeWindows(imgSize, x_start_stop=None, y_start_stop=None,
                   xy_window=(32, 32), xy_overlap=(0.5, 0.5)):
@@ -92,7 +92,7 @@ def searchOverWindows(img, windows, clf, scaler,
         scFeatures = scaler.transform(np.concatenate(features).reshape(1, -1))
 
         # Have the classifier make the prediction
-        #prediction = predictWithMargin(clf, scFeatures, 0.25)
+        #prediction = predictBinary(clf, scFeatures)
         prediction = predictWithMargin(clf, scFeatures, 0.7)
         if prediction:
             positives.append(win)
@@ -152,6 +152,7 @@ def processFrame(img, intermediates=True):
             state['scaler'], state['spatialParams'], state['colorParams'],
             state['hogParams'])
 
+    #print(len(positives))
     #heatmap = state['heatmap']
     heatmapCurrent = genHeatmap(positives, state['imgSize'])
     state['heatmaps'].append(heatmapCurrent)
@@ -198,7 +199,8 @@ if __name__ == '__main__':
     #state['heatmap'] = np.zeros(state['imgSize'], dtype=np.float)
     state['heatmaps'] = deque(maxlen=detectParams['heatmapCacheSize'])
 
-    videoIn = VideoFileClip('./test_video.mp4')
+    #videoIn = VideoFileClip('./test_video.mp4')
+    videoIn = VideoFileClip('./project_video.mp4')
     videoOut = videoIn.fl_image(processFrame)
     videoOut.write_videofile('out.mp4', audio=False)
 
