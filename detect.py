@@ -4,7 +4,7 @@ import numpy as np
 import itertools
 import pickle
 import cv2
-
+from scipy.ndimage.measurements import label
 from train import extract_features, convertColor
 
 def genSameSizeWindows(imgSize, x_start_stop=None, y_start_stop=None,
@@ -75,6 +75,40 @@ def searchOverWindows(img, windows, clf, scaler,
 
     return posWindows
 
+def updateHeatMap(heatmap, windows):
+    # Iterate through list of bboxes
+    for win in windows:
+        # Add += 1 for all pixels inside each bbox
+        # Assuming each "box" takes the form ((x1, y1), (x2, y2))
+        heatmap[win[0][1]:win[1][1], win[0][0]:win[1][0]] += 1
+
+    # Return updated heatmap
+    return heatmap
+
+
+def thresholdHeatmap(heatmap, threshold):
+    # Zero out pixels below the threshold
+    heatmap[heatmap <= threshold] = 0
+    # Return thresholded map
+    return heatmap
+
+
+def drawLabels(img, labels):
+    # Iterate through all detected cars
+    for car_number in range(1, labels[1]+1):
+        # Find pixels with each car_number label value
+        nonzero = (labels[0] == car_number).nonzero()
+        # Identify x and y values of those pixels
+        nonzeroy = np.array(nonzero[0])
+        nonzerox = np.array(nonzero[1])
+        # Define a bounding box based on min/max x and y
+        bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
+        # Draw the box on the image
+        cv2.rectangle(img, bbox[0], bbox[1], (0,0,255), 6)
+    # Return the image
+    return img
+
+
 if __name__ == '__main__':
 
     ## Read the saved model
@@ -91,17 +125,7 @@ if __name__ == '__main__':
     testImg = mpimg.imread('test_images/test1.jpg')
     procImg = convertColor(testImg, cspace)
     imgSize = procImg.shape[:2]
-    #pyramid = [
-    #        ((64, 64),  [400, 500]),
-    #        ((96, 96),  [400, 500]),
-    #        ((128, 128),[450, 600]),
-    #          ]
-    #pyramid = [
-    #        #((64, 64),  [400, 500]),
-    #        #((96, 96),  [400, 500]),
-    #        ((128, 128),[450, 600]),
-    #          ]
-    pyramid = [
+    windowSizes = [
            ((64, 64),  [400, 500]),
            ((96, 96),  [400, 500]),
            ((128, 128),[400, 578]),
@@ -109,19 +133,28 @@ if __name__ == '__main__':
            ((256, 256),[450, 700])
       ]
 
-    windows = genWindowList(pyramid, imgSize)
+    windows = genWindowList(windowSizes, imgSize)
 
     posWindows = searchOverWindows(procImg, windows, clf, scaler,
             spatialParams, colorParams, hogParams)
 
-    #print(posWindows)
+    heatmap = np.zeros_like(testImg[:,:,0]).astype(np.float)
+    updateHeatMap(heatmap, posWindows)
+    #thresholdHeatmap(heatmap, 1)
+
+    # Find final boxes from heatmap using label function
+    labels = label(heatmap)
+    drawImg = drawLabels(np.copy(testImg), labels)
+
+    fig = plt.figure()
+    plt.subplot(1,3,1)
     for p1, p2 in itertools.chain(posWindows):
-        print(p1)
-        print(p2)
         cv2.rectangle(testImg, p1, p2, (15,15,200), 4)
     plt.imshow(testImg)
+    plt.subplot(1,3,2)
+    plt.imshow(heatmap)
+    plt.subplot(1,3,3)
+    plt.imshow(drawImg)
     plt.show()
-
-    #print(len(windows))
 
 
