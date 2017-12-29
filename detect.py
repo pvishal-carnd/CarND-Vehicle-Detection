@@ -7,6 +7,17 @@ import cv2
 from scipy.ndimage.measurements import label
 from train import extract_features, convertColor
 
+state = {}
+detectParams = {}
+detectParams['windowSizes'] = [
+                              ((64, 64),  [400, 500]),
+                               ((96, 96),  [400, 500]),
+                               ((128, 128),[400, 578]),
+                               ((192, 192),[450, 700]),
+                               ((256, 256),[450, 700])
+                              ]
+detectParams['windowOverlap'] = (0.5, 0.5)
+
 def genSameSizeWindows(imgSize, x_start_stop=None, y_start_stop=None,
                   xy_window=(32, 32), xy_overlap=(0.5, 0.5)):
 
@@ -44,25 +55,25 @@ def genSameSizeWindows(imgSize, x_start_stop=None, y_start_stop=None,
     # Return the list of windows
     return window_list
 
-def genWindowList(sizeList, imgSize):
+def genWindowList(sizeList, imgSize, overlaps):
     output = []
     for winSize, yLims in sizeList:
         windows = genSameSizeWindows(imgSize, x_start_stop=None, y_start_stop=yLims,
-                                    xy_window=winSize, xy_overlap=(0.5, 0.5))
+                                    xy_window=winSize, xy_overlap=overlaps)
         output.extend(windows)
     return output
 
 def searchOverWindows(img, windows, clf, scaler,
                       spatialParams, colorParams, hogParams):
 
+    clfSize = spatialParams['clfSize']
     # A list to store all positive windows
     posWindows = []
 
     # Iterate over all windows in the input image
     for win in windows:
         # Extract pixels and resize
-        # TODO: Don't hardcode (64,64)
-        winImg = cv2.resize(img[win[0][1]:win[1][1], win[0][0]:win[1][0]], (64, 64))
+        winImg = cv2.resize(img[win[0][1]:win[1][1], win[0][0]:win[1][0]], clfSize)
         features = extract_features(winImg, spatialParams, colorParams, hogParams)
 
         # Have the scaler scale the features
@@ -109,52 +120,68 @@ def drawLabels(img, labels):
     return img
 
 
-if __name__ == '__main__':
+def processFrame(img, intermediates=False):
 
-    ## Read the saved model
+    cspace = state['hogParams']['colorSpace']
+    cImg = convertColor(img, cspace)
+    positives = searchOverWindows(cImg, state['windows'], state['clf'],
+            state['scaler'], state['spatialParams'], state['colorParams'],
+            state['hogParams'])
 
-    loaded = pickle.load(open('model.pkl', 'rb'))
-    clf = loaded['model']
-    scaler = loaded['scaler']
-    spatialParams = loaded['spatialParams']
-    colorParams   = loaded['colorParams']
-    hogParams     = loaded['hogParams']
+    heatmap = state['heatmap']
+    heatmap = updateHeatMap(heatmap, positives)
 
-    ## Test window creation
-    cspace = hogParams['colorSpace']
-    testImg = mpimg.imread('test_images/test1.jpg')
-    procImg = convertColor(testImg, cspace)
-    imgSize = procImg.shape[:2]
-    windowSizes = [
-           ((64, 64),  [400, 500]),
-           ((96, 96),  [400, 500]),
-           ((128, 128),[400, 578]),
-           ((192, 192),[450, 700]),
-           ((256, 256),[450, 700])
-      ]
-
-    windows = genWindowList(windowSizes, imgSize)
-
-    posWindows = searchOverWindows(procImg, windows, clf, scaler,
-            spatialParams, colorParams, hogParams)
-
-    heatmap = np.zeros_like(testImg[:,:,0]).astype(np.float)
-    updateHeatMap(heatmap, posWindows)
     #thresholdHeatmap(heatmap, 1)
 
     # Find final boxes from heatmap using label function
     labels = label(heatmap)
     drawImg = drawLabels(np.copy(testImg), labels)
 
+    state['heatmap'] = heatmap
+
+    if intermediates:
+        heatmap = heatmap/np.max(heatmap)
+        winImg = np.copy(img)
+        for p1, p2 in itertools.chain(positives):
+            cv2.rectangle(winImg, p1, p2, (15,15,200), 3)
+
+        imgTopLeft  = img/np.max(img)
+        imgTopRight = winImg/np.max(winImg)
+        imgBotLeft  = np.dstack(( heatmap, heatmap, heatmap ))
+        imgBotRight = drawImg/np.max(drawImg)
+        outFrame = np.vstack((
+                        np.hstack( (imgTopLeft, imgTopRight) ),
+                        np.hstack( (imgBotLeft, imgBotRight) )
+                        ))
+    else:
+        outFrame = drawImg
+
+    return outFrame
+
+
+if __name__ == '__main__':
+
+    ## Read the saved model and save it to a local cache
+    loaded = pickle.load(open('model.pkl', 'rb'))
+    state['clf']           = loaded['model']
+    state['scaler']        = loaded['scaler']
+    state['spatialParams'] = loaded['spatialParams']
+    state['colorParams']   = loaded['colorParams']
+    state['hogParams']     = loaded['hogParams']
+    state['imgSize']       = (720, 1280)
+
+    state['windows'] = genWindowList(detectParams['windowSizes'],
+                        state['imgSize'], detectParams['windowOverlap'])
+    state['heatmap'] = np.zeros(state['imgSize'], dtype=np.float)
+
+    ## Test window creation
+    testImg = mpimg.imread('test_images/test1.jpg')
+    outImg = processFrame(testImg, intermediates=True)
+
     fig = plt.figure()
-    plt.subplot(1,3,1)
-    for p1, p2 in itertools.chain(posWindows):
-        cv2.rectangle(testImg, p1, p2, (15,15,200), 4)
-    plt.imshow(testImg)
-    plt.subplot(1,3,2)
-    plt.imshow(heatmap)
-    plt.subplot(1,3,3)
-    plt.imshow(drawImg)
+    plt.imshow(outImg)
+    plt.xticks([])
+    plt.yticks([])
     plt.show()
 
 

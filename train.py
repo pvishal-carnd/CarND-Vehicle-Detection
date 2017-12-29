@@ -12,6 +12,7 @@ from sklearn.model_selection import train_test_split
 
 spatialParams = {}
 spatialParams['size'] = (32, 32)
+spatialParams['clfSize'] = (64, 64)
 
 colorParams = {}
 colorParams['nBins'] = 32
