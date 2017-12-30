@@ -14,7 +14,7 @@ The goals / steps of this project are the following:
 This pipeline is then used to draw bounding boxes around the cars in the video. 
 
 [//]: # (Image References)
-[image1]: ./images/car_notcar.png
+[image1]: ./images/confmat.png
 [image2]: ./images/HOG_features_HLS.png
 [image3]: ./images/false_positives.png
 [image4]: ./images/sliding_windows.png
@@ -41,7 +41,6 @@ The training data for this project was provided by Udacity. This dataset consist
 * 8792 positive images and 9666 negative 
 * Slightly unbalanced with about 10% more negatives than positives. This is not a problem considering that are more "non-car" cases in reality than cars.
 
-![sample][image1]
 
 ## Designing and training a classifier
 
@@ -87,7 +86,7 @@ While the accuracy was the classifier was close to 97%, there were still a large
 
 The classifier is significantly fast to evaluate taking much less than a millisecond to predict.
 
-![FalsePositives][image3]
+![Confusion matrix][image1]
 
 ### Sliding Window Search
 
@@ -96,8 +95,7 @@ To use a trained classifier to detect cars in an image, it is necessary to divid
 1. We evalute four window sizes: 64x64, 96x96, 128x128 and 192x192. 
 2. For each of the above sizes, we limit the area of search considering the physical possibiliy of finding cars of those sizes in different areas of the image. Here is the list that specifies this:
 ```
-detectParams['windowSizes'] = [
-                                  ((64, 64),  [400, 500]),
+detectParams['windowSizes'] = [((64, 64),  [400, 500]),
                                   ((96, 96),  [400, 500]),
                                   ((128, 128),[400, 578]),
                                   ((192, 192),[450, 700])]
