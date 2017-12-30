@@ -24,8 +24,8 @@ This pipeline is then used to draw bounding boxes around the cars in the video. 
 ### Files 
 1. ```train.py```: Code to evaluate features, train the classifier and save it
 2. ```detect.py```: Code to load the train classifier and detect cars on video streams
-3. ```project_video_out.mp4```: The output video
-4. ```project_video_out_diag.mp4```: The output video with intermediate results for debugging
+3. ```project_video_out.mp4```: The output video. Can be  found [here](./project_video_out.mp4)
+4. ```project_video_out_diag.mp4```: The output video with intermediate results for debugging. Can be found [here](./project_video_out_diag.mp4)
 5. ```writeup.md```: This file
 
 ## Data Exploration
@@ -72,8 +72,6 @@ hogParams['hogChannel']    = 0 # Y in this case
 
 ```
 
-**display hog image**
-
 ### Training an SVM 
 
 We used the `LinearSVC` taken from the `scikit-learn` package to train our classifier. We also tried the RBF kernel but that took significantly more time to train and evaluate and a linear kernel gave us sufficient accuracy. 
@@ -108,8 +106,8 @@ Let us start with inspecting the results of our sliding window search. We see th
 
 Also like we see in the confusion matrix, we have false positives. Certain parts of side rails, lane markings and some tree borders were consistently been shown as positives. To reject them, the following strategy was used.
 
-1. **Re-traning the classifier: **  Initially, accuracy was the only criterion for tuning the classifier and training parameters. Later in the project, rate of false positives was also considered as a criteria. 
-2. **Thresholding the decision function: ** For an SVM classifier, the distance of a feature point from the seperating hyperplane can be considered as a metric for prediction confidence. Therefore, points that are too close to this line were rejected. This helped reject some false positives. Implementation of both binary and thresholded prediction schemes is shown below:
+1. **Re-traning the classifier:**  Initially, accuracy was the only criterion for tuning the classifier and training parameters. Later in the project, rate of false positives was also considered as a criteria. 
+2. **Thresholding the decision function:** For an SVM classifier, the distance of a feature point from the seperating hyperplane can be considered as a metric for prediction confidence. Therefore, points that are too close to this line were rejected. This helped reject some false positives. Implementation of both binary and thresholded prediction schemes is shown below:
 
 	```
 	def predictBinary(clf, features):
