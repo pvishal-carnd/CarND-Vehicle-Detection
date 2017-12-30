@@ -230,3 +230,4 @@ if __name__ == '__main__':
     plotConfusionMatrix(confmat, classes=['Car', 'Not car'], normalize=True,
                       title='Normalized confusion matrix')
     plt.show()
+

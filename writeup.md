@@ -1,37 +1,32 @@
 # Vehicle Detection and Tracking
 
+[//]: # (Image References)
+[image1]: ./images/confmat.png
+[image2]: ./images/slidingwindows.png
+[image3]: ./images/detections.png
+[image4]: ./images/heatmap.png
+[image5]: ./images/project_video_out.gif
+
 ## Introduction
 
 The goals / steps of this project are the following:
 
 * Perform a Histogram of Oriented Gradients (HOG) feature extraction on a labeled training set of images and train a classifier Linear SVM classifier
-* Optionally, you can also apply a color transform and append binned color features, as well as histograms of color, to your HOG feature vector. 
-* Note: for those first two steps don't forget to normalize your features and randomize a selection for training and testing.
+* Optionally, apply a color transform and append binned color features, as well as histograms of color, to the HOG feature vector. 
 * Implement a sliding-window technique and use your trained classifier to search for vehicles in images.
-* Run your pipeline on a video stream (start with the test_video.mp4 and later implement on full project_video.mp4) and create a heat map of recurring detections frame by frame to reject outliers and follow detected vehicles.
+* Run the pipeline on a video stream  and create a heat map of recurring detections frame by frame to reject outliers and follow detected vehicles.
 * Estimate a bounding box for vehicles detected.
 
-This pipeline is then used to draw bounding boxes around the cars in the video. 
+This pipeline is then used to draw bounding boxes around the cars in the video. Following is a sneak peak into the results of the project. 
 
-[//]: # (Image References)
-[image1]: ./images/confmat.png
-[image2]: ./images/HOG_features_HLS.png
-[image3]: ./images/false_positives.png
-[image4]: ./images/sliding_windows.png
-[image5]: ./images/detection_example.png
-[image6]: ./images/heatmap.png
-[image7]: ./images/labels.png
-[image8]: ./images/bounding_boxes.png
-[image9]: ./images/yolo-hero.png
-[video1]: ./output_images/processed_project_video.mp4
-
+![Result GIF][image5]
 
 ### Files 
-* ```train.py```
-* ```detect.py```
-* ```project_video_out.mp4```
-* ```project_video_out_diag.mp4```
-* ```writeup.md```
+1. ```train.py```: Code to evaluate features, train the classifier and save it
+2. ```detect.py```: Code to load the train classifier and detect cars on video streams
+3. ```project_video_out.mp4```: The output video
+4. ```project_video_out_diag.mp4```: The output video with intermediate results for debugging
+5. ```writeup.md```: This file
 
 ## Data Exploration
 
@@ -77,6 +72,7 @@ hogParams['hogChannel']    = 0 # Y in this case
 
 ```
 
+**display hog image**
 
 ### Training an SVM 
 
@@ -87,6 +83,8 @@ While the accuracy was the classifier was close to 97%, there were still a large
 The classifier is significantly fast to evaluate taking much less than a millisecond to predict.
 
 ![Confusion matrix][image1]
+
+Clearly, our classifier has 100% recall but we do have false positives.
 
 ### Sliding Window Search
 
@@ -100,15 +98,17 @@ detectParams['windowSizes'] = [((64, 64),  [400, 500]),
                                   ((128, 128),[400, 578]),
                                   ((192, 192),[450, 700])]
 ```  
-
-**show sliding windows**
-![SlidingWindows][image4]
+The following image shows the multiscale sliding windows.
+![Sliding Windows][image2]
 
 ### False positives 
+Let us start with inspecting the results of our sliding window search. We see that all the cars, that are large enough in size, are detected by our pipeline. This is according to what we saw in our confusion matrix.
 
-Certains parts of side rails, lane markings and some tree borders were consistently been shown as positives. To reject them, the following strategy was used.
+![Detections][image3]
 
-1. **Re-traning the classifier: ** Initially, accuracy was the only criterion for tuning the classifier and training parameters. Later in the project, rate of false positives was also considered as a criteria. 
+Also like we see in the confusion matrix, we have false positives. Certain parts of side rails, lane markings and some tree borders were consistently been shown as positives. To reject them, the following strategy was used.
+
+1. **Re-traning the classifier: **  Initially, accuracy was the only criterion for tuning the classifier and training parameters. Later in the project, rate of false positives was also considered as a criteria. 
 2. **Thresholding the decision function: ** For an SVM classifier, the distance of a feature point from the seperating hyperplane can be considered as a metric for prediction confidence. Therefore, points that are too close to this line were rejected. This helped reject some false positives. Implementation of both binary and thresholded prediction schemes is shown below:
 
 	```
@@ -155,20 +155,24 @@ We do the following:
 	```
 5. We use this thresholded heatmap to label pixels using `scipy.ndimage.measurements.label()` and draw bounding boxes.
 
-The results are as shown
+Following are the heatmaps for the set of images shown above. The false positives are consistent and some of them are also seen across frame. We therefore had to integrate the heatmaps over 10 frames and keep a high acceptance threshold.
+ 
+![Heatmaps][image4]
 
-**show heatmaps at work**
 
+```
+detectParams['heatmapCacheSize'] = 10
+detectParams['heatmapThreshold'] = 10
+```
 
-
-This concludes the project.
+This concludes the project. The output video is [here](project_video_out.mp4). A diagnostic version of this video with intermediate processing frames is also available [here](project_video_out_diag.mp4)
 
 
 ## Discussion
 
 1. The rate of false-postives is still very high. Due to the systematic nature of the side rails and some lane markings being shown as positives, there is a case for hard negative mining. 
-2. The speed of detection is still very low. In comparison, YOLO object detection works with a larger class of objects with FPS greater than 60. Most of the time is used up in evaluating HOG features. A way to improve speed would be to compute the HOG features only once for the entire region of interest and then select the right feature vectors. In addition, evaluation of critical code in C++ and parallelizing (this is an embarrassingly parallel task 
-) are also possible options. 
+2. The bounding boxes are wobbly and a little unstable. This can be improved with further filtering and tracking. Specifically tracking, with a constant velocity model, would give very stable estimates of the car positions through frames even if measured positions and bounding boxes are noisy.  
+3. The speed of detection is still very low. In comparison, YOLO object detection works with a larger class of objects with FPS greater than 60. Most of the time is used up in evaluating HOG features. A way to improve speed would be to compute the HOG features only once for the entire region of interest and then select the right feature vectors. In addition, evaluation of critical code in C++ and parallelizing (this is an embarrassingly parallel task) are also possible options. 
 
 
 

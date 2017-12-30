@@ -98,15 +98,6 @@ def searchOverWindows(img, windows, clf, scaler,
 
     return positives
 
-#def updateHeatMap(windows, heatmap=None):
-#    # Iterate through list of bboxes
-#    for win in windows:
-#        # Add += 1 for all pixels inside each bbox
-#        # Assuming each "box" takes the form ((x1, y1), (x2, y2))
-#        heatmap[win[0][1]:win[1][1], win[0][0]:win[1][0]] += 1
-#
-#    # Return updated heatmap
-#    return heatmap
 
 def genHeatmap(windows, imgSize):
     heatmap = np.zeros(imgSize, dtype=np.float)
@@ -143,7 +134,7 @@ def drawLabels(img, labels):
     return img
 
 
-def processFrame(img, intermediates=True):
+def processFrame(img, intermediates=False):
 
     cspace = state['hogParams']['colorSpace']
     cImg = convertColor(img, cspace)
@@ -201,16 +192,52 @@ if __name__ == '__main__':
     #videoIn = VideoFileClip('./test_video.mp4')
     videoIn = VideoFileClip('./project_video.mp4')
     videoOut = videoIn.fl_image(processFrame)
-    videoOut.write_videofile('out.mp4', audio=False)
+    videoOut.write_videofile('./project_video_out.mp4', audio=False)
 
-    ## Test window creation
-    #testImg = mpimg.imread('test_images/test1.jpg')
-    #outImg = processFrame(testImg, intermediates=True)
+
+    ### Test window creation
+    #img = mpimg.imread('test_images/test1.jpg')
+
+    #colors = [(255, 255, 0), (0,0,255), (0,255,0), (255,0,0)]
+    #windows = state['windows']
+    #for i in range(4):
+    #    for p1, p2 in itertools.chain(windows[i]):
+    #        cv2.rectangle(img, p1, p2, colors[i], 3)
 
     #fig = plt.figure()
-    #plt.imshow(outImg)
+    #plt.imshow(img)
     #plt.xticks([])
     #plt.yticks([])
     #plt.show()
 
+
+    ### Show test images
+    #def readFolderToStack(path='./test_images/'):
+    #    import os
+    #    imgList = []
+    #    imgNames = []
+    #    for file in os.listdir(path):
+    #        imgList.append(mpimg.imread(path + file))
+    #        filename = os.path.splitext(file)[0]
+    #        imgNames.append(file)
+
+    #    return imgList, imgNames
+
+    #def displayImagelist(imgList, cmap=None, cols=2):
+    #    rows = np.ceil(len(imgList)/cols)
+
+    #    plt.figure()
+    #    for i, img in enumerate(imgList):
+    #        plt.subplot(rows, cols, i+1)
+    #        if len(img.shape) == 2:
+    #            cmap = 'gray'
+    #        plt.imshow(img, cmap='hot')
+    #        plt.xticks([])
+    #        plt.yticks([])
+    #    plt.tight_layout()
+    #    plt.show()
+
+    #imgList, _ = readFolderToStack()
+    #outImgList = [processFrame(img) for img in imgList]
+    #displayImagelist(outImgList)
 
