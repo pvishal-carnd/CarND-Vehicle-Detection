@@ -9,6 +9,8 @@ from skimage.feature import hog
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
+from plotconfusionmatrix import plotConfusionMatrix
 
 spatialParams = {}
 spatialParams['enabled'] = True
@@ -214,10 +216,17 @@ if __name__ == '__main__':
     svc = loaded['model']
 
     t  = time.time()
-    n_predict = 10
-    print('Random lables:', n_predict, 'labels: ', y_test[0:n_predict])
-    print('Predictions:  ', svc.predict(X_test[0:n_predict]))
+    n_predict = 100
+    y_label = y_test[0:n_predict]
+    y_pred  = svc.predict(X_test[0:n_predict])
     t2 = time.time()
 
-    print(round(t2-t, 5), 'Seconds to predict', n_predict,'labels with SVC')
+    print('Prediction time for ', n_predict,' labels:', round(t2-t, 5))
 
+    # Compute and plot the confusion matrix
+    confmat = confusion_matrix(y_test[0:n_predict], svc.predict(X_test[0:n_predict]))
+    plt.figure
+
+    plotConfusionMatrix(confmat, classes=['Car', 'Not car'], normalize=True,
+                      title='Normalized confusion matrix')
+    plt.show()

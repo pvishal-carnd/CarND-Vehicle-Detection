@@ -15,8 +15,7 @@ detectParams['windowSizes'] = [
                               ((64, 64),  [400, 500]),
                                ((96, 96),  [400, 500]),
                                ((128, 128),[400, 578]),
-                               ((192, 192),[450, 700]),
-                               ((256, 256),[450, 700])
+                               ((192, 192),[450, 700])
                               ]
 detectParams['windowOverlap'] = (0.5, 0.5)
 detectParams['heatmapCacheSize'] = 10
